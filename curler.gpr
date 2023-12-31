@@ -1,0 +1,12 @@
+project Curler is
+
+   for Source_Dirs use ("src");
+   for Object_Dir use "obj";
+   for Main use ("curler.adb");
+
+   package Linker is
+      for Switches ("ada") use ("-lcurl_pic", "-lssh2_pic", "-lmbedtls", "-lmbedx509", "-lmbedcrypto", "-lz_pic");
+   end Linker;
+
+end Curler;
+
