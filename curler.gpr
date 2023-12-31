@@ -5,7 +5,7 @@ project Curler is
    for Main use ("curler.adb");
 
    package Linker is
-      for Switches ("ada") use ("-lcurl_pic", "-lssh2_pic", "-lmbedtls", "-lmbedx509", "-lmbedcrypto", "-lz_pic");
+      for Switches ("ada") use ("-lcurl_pic", "-lssh2_pic", "-lmbedtls", "-lmbedx509", "-lmbedcrypto", "-lz_pic", "-pthread");
    end Linker;
 
 end Curler;

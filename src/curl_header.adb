@@ -39,9 +39,9 @@ package body curl_header is
    end set_curl_option;
 
 
-   -----------------------
-   --  set_curl_option  --
-   -----------------------
+   --------------------------
+   --  set_curl_option #3  --
+   --------------------------
    procedure set_curl_option (curlobj : CURLX; option : OptionCallback; optvalue : curl_callback)
    is
       result : CURLcode;
@@ -54,9 +54,9 @@ package body curl_header is
    end set_curl_option;
 
 
-   -----------------------
-   --  set_curl_option  --
-   -----------------------
+   --------------------------
+   --  set_curl_option #4  --
+   --------------------------
    procedure set_curl_option (curlobj : CURLX; option : OptionBool; optvalue : Boolean)
    is
       result : CURLcode;
@@ -69,6 +69,21 @@ package body curl_header is
       case result is
          when CURLE_OK => null;
          when others => TIO.Put_Line ("Failed to set " & option'Img & " (" & optvalue'Img & ")");
+      end case;
+   end set_curl_option;
+
+
+   --------------------------
+   --  set_curl_option #5  --
+   --------------------------
+   procedure set_curl_option (curlobj : CURLX; option : OptionPointer; optvalue : Void_Ptr)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_pointer (curlobj, option, optvalue);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set " & option'Img);
       end case;
    end set_curl_option;
 
