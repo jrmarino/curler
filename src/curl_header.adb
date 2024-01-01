@@ -42,21 +42,6 @@ package body curl_header is
    --------------------------
    --  set_curl_option #3  --
    --------------------------
-   procedure set_curl_option (curlobj : CURLX; option : OptionCallback; optvalue : curl_callback)
-   is
-      result : CURLcode;
-   begin
-      result := curl_setopt_callback (curlobj, option, optvalue);
-      case result is
-         when CURLE_OK => null;
-         when others => TIO.Put_Line ("Failed to set " & option'Img);
-      end case;
-   end set_curl_option;
-
-
-   --------------------------
-   --  set_curl_option #4  --
-   --------------------------
    procedure set_curl_option (curlobj : CURLX; option : OptionBool; optvalue : Boolean)
    is
       result : CURLcode;
@@ -74,7 +59,7 @@ package body curl_header is
 
 
    --------------------------
-   --  set_curl_option #5  --
+   --  set_curl_option #4  --
    --------------------------
    procedure set_curl_option (curlobj : CURLX; option : OptionPointer; optvalue : Void_Ptr)
    is
@@ -101,5 +86,80 @@ package body curl_header is
          when others => TIO.Put_Line ("Failed to execute curl");
       end case;
    end execute_curl;
+
+
+   --------------------------
+   --  set_write_callback  --
+   --------------------------
+   procedure set_write_callback (curlobj : CURLX; callback : write_callback)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_write_callback (curlobj, CURLOPT_WRITEFUNCTION, callback);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set set_write_callback");
+      end case;
+   end set_write_callback;
+
+
+   -------------------------
+   --  set_read_callback  --
+   -------------------------
+   procedure set_read_callback (curlobj : CURLX; callback : write_callback)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_write_callback (curlobj, CURLOPT_READFUNCTION, callback);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set set_read_callback");
+      end case;
+   end set_read_callback;
+
+
+   ---------------------------
+   --  set_header_callback  --
+   ---------------------------
+   procedure set_header_callback (curlobj : CURLX; callback : write_callback)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_write_callback (curlobj, CURLOPT_HEADERFUNCTION, callback);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set set_header_callback");
+      end case;
+   end set_header_callback;
+
+
+   --------------------------
+   --  set_debug_callback  --
+   --------------------------
+   procedure set_debug_callback (curlobj : CURLX; callback : debug_callback)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_write_callback (curlobj, CURLOPT_DEBUGFUNCTION, callback);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set set_debug_callback");
+      end case;
+   end set_debug_callback;
+
+
+   -----------------------------
+   --  set_progress_callback  --
+   -----------------------------
+   procedure set_progress_callback (curlobj : CURLX; callback : progress_callback)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_progress_callback (curlobj, CURLOPT_XFERINFOFUNCTION, callback);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set set_progress_callback");
+      end case;
+   end set_progress_callback;
 
 end curl_header;

@@ -18,6 +18,7 @@ begin
    curlobj := curl_header.curl_easy_init;
    curl_header.set_curl_option (curlobj, curl_header.CURLOPT_VERBOSE, True);
    curl_header.set_curl_option (curlobj, curl_header.CURLOPT_URL, CLI.Argument (1));
+   curl_header.execute_curl (curlobj);
 
 
    curl_header.curl_easy_cleanup (curlobj);

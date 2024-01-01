@@ -627,14 +627,10 @@ package curl_header is
    type OptionCallback is
      (CURLOPT_WRITEFUNCTION,
       CURLOPT_READFUNCTION,
-      CURLOPT_PROGRESSFUNCTION,
       CURLOPT_HEADERFUNCTION,
       CURLOPT_DEBUGFUNCTION,
       CURLOPT_SSL_CTX_FUNCTION,
       CURLOPT_IOCTLFUNCTION,
-      CURLOPT_CONV_FROM_NETWORK_FUNCTION,
-      CURLOPT_CONV_TO_NETWORK_FUNCTION,
-      CURLOPT_CONV_FROM_UTF8_FUNCTION,
       CURLOPT_SOCKOPTFUNCTION,
       CURLOPT_OPENSOCKETFUNCTION,
       CURLOPT_SEEKFUNCTION,
@@ -655,14 +651,10 @@ package curl_header is
    for OptionCallback use
      (CURLOPT_WRITEFUNCTION              => 20011,
       CURLOPT_READFUNCTION               => 20012,
-      CURLOPT_PROGRESSFUNCTION           => 20056,
       CURLOPT_HEADERFUNCTION             => 20079,
       CURLOPT_DEBUGFUNCTION              => 20094,
       CURLOPT_SSL_CTX_FUNCTION           => 20108,
       CURLOPT_IOCTLFUNCTION              => 20130,
-      CURLOPT_CONV_FROM_NETWORK_FUNCTION => 20142,
-      CURLOPT_CONV_TO_NETWORK_FUNCTION   => 20143,
-      CURLOPT_CONV_FROM_UTF8_FUNCTION    => 20144,
       CURLOPT_SOCKOPTFUNCTION            => 20148,
       CURLOPT_OPENSOCKETFUNCTION         => 20163,
       CURLOPT_SEEKFUNCTION               => 20167,
@@ -749,12 +741,41 @@ package curl_header is
      );
    pragma Convention (C, OptionPointer);
 
-   type curl_callback is access function
+   type curl_infotype is
+     (CURLINFO_TEXT,
+      CURLINFO_HEADER_IN,
+      CURLINFO_HEADER_OUT,
+      CURLINFO_DATA_IN,
+      CURLINFO_DATA_OUT,
+      CURLINFO_SSL_DATA_IN,
+      CURLINFO_SSL_DATA_OUT,
+      CURLINFO_END);
+   pragma Convention (C, curl_infotype);
+
+   type write_callback is access function
      (ptr      : IC.Strings.chars_ptr;
       size     : IC.size_t;
       nmemb    : IC.size_t;
       userdata : System.Address) return IC.size_t;
-   pragma Convention (C, curl_callback);
+   pragma Convention (C, write_callback);
+
+   type debug_callback is access function
+     (handle   : CURLX;
+      dtype    : curl_infotype;
+      data     : IC.Strings.chars_ptr;
+      size     : IC.size_t;
+      clientp  : Void_Ptr) return IC.int;
+   pragma Convention (C, debug_callback);
+
+   type curl_off_t is range -(2**63) .. +(2**63 - 1);
+
+   type progress_callback is access function
+     (clientp  : Void_Ptr;
+      dltotal  : curl_off_t;
+      dlnow    : curl_off_t;
+      ultotal  : curl_off_t;
+      ulnow    : curl_off_t) return IC.int;
+   pragma Convention (C, progress_callback);
 
    --  initialize curl object
    function curl_easy_init return CURLX;
@@ -773,11 +794,19 @@ package curl_header is
    --  overloaded procedure to set curl object boolean properties
    procedure set_curl_option (curlobj : CURLX; option : OptionBool; optvalue : Boolean);
 
-   --  overloaded procedure to set curl object callback properties
-   procedure set_curl_option (curlobj : CURLX; option : OptionCallback; optvalue : curl_callback);
-
    --  overloaded procedure to set curl object pointer properties
    procedure set_curl_option (curlobj : CURLX; option : OptionPointer; optvalue : Void_Ptr);
+
+   --  implement CURLOPT_WRITEFUNCTION, CURLOPT_READFUNCTION, CURLOPT_HEADERFUNCTION
+   procedure set_write_callback  (curlobj : CURLX; callback : write_callback);
+   procedure set_read_callback   (curlobj : CURLX; callback : write_callback);
+   procedure set_header_callback (curlobj : CURLX; callback : write_callback);
+
+   --  CURLOPT_DEBUGFUNCTION
+   procedure set_debug_callback (curlobj : CURLX; callback : debug_callback);
+
+   --  CURLOPT_XFERINFOFUNCTION
+   procedure set_progress_callback (curlobj : CURLX; callback : progress_callback);
 
    procedure execute_curl (curlobj : CURLX);
 
@@ -801,11 +830,23 @@ private
       value  : IC.long) return CURLcode;
    pragma Import (C, curl_setopt_bool, "curl_easy_setopt");
 
-   function curl_setopt_callback
+   function curl_setopt_write_callback
      (curl   : CURLX;
       option : OptionCallback;
-      value  : curl_callback) return CURLcode;
-   pragma Import (C, curl_setopt_callback, "curl_easy_setopt");
+      value  : write_callback) return CURLcode;
+   pragma Import (C, curl_setopt_write_callback, "curl_easy_setopt");
+
+   function curl_setopt_debug_callback
+     (curl   : CURLX;
+      option : OptionCallback;
+      value  : debug_callback) return CURLcode;
+   pragma Import (C, curl_setopt_debug_callback, "curl_easy_setopt");
+
+   function curl_setopt_progress_callback
+     (curl   : CURLX;
+      option : OptionCallback;
+      value  : progress_callback) return CURLcode;
+   pragma Import (C, curl_setopt_progress_callback, "curl_easy_setopt");
 
    function curl_setopt_pointer
      (curl   : CURLX;
