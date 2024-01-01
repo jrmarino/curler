@@ -13,6 +13,7 @@ package body curl_callbacks is
       bytes_passed : constant Natural := Natural (nmemb);
       zdata : curldata;
       for zdata'Address use userdata;
+      pragma Import (Ada, zdata);
    begin
       if bytes_passed = 0 then
          return IC.size_t (0);
