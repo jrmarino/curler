@@ -140,7 +140,7 @@ package body curl_header is
    is
       result : CURLcode;
    begin
-      result := curl_setopt_write_callback (curlobj, CURLOPT_DEBUGFUNCTION, callback);
+      result := curl_setopt_debug_callback (curlobj, CURLOPT_DEBUGFUNCTION, callback);
       case result is
          when CURLE_OK => null;
          when others => TIO.Put_Line ("Failed to set set_debug_callback");
