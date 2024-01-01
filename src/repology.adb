@@ -17,7 +17,7 @@ is
 begin
 
    data.totalsize := 0;
-   CAL.SIO.Create (data.file_handle, CAL.SIO.In_File, "/tmp/repology.json");
+   CAL.SIO.Create (data.file_handle, CAL.SIO.Out_File, "/tmp/repology.json");
 
    curlobj := curl_header.curl_easy_init;
    curl_header.set_curl_option (curlobj, curl_header.CURLOPT_VERBOSE, False);
