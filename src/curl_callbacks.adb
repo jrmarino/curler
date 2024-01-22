@@ -1,10 +1,17 @@
 with Ada.Unchecked_Conversion;
-with curl_header;
+with Ada.Text_IO;
+with Ada.Strings.Fixed;
+with Ada.Direct_IO;
+with Ada.Directories;
 
 package body curl_callbacks is
 
    package STM renames Ada.Streams;
+   package FIX renames Ada.Strings.Fixed;
 
+   ------------------
+   --  write_file  --
+   ------------------
    function write_file (ptr      : IC.Strings.chars_ptr;
                         size     : IC.size_t;
                         nmemb    : IC.size_t;
@@ -38,5 +45,152 @@ package body curl_callbacks is
       return nmemb;
 
    end write_file;
+
+
+   ----------------------
+   --  process_header  --
+   ----------------------
+   function process_header
+     (ptr      : IC.Strings.chars_ptr;
+      size     : IC.size_t;
+      nmemb    : IC.size_t;
+      userdata : System.Address) return IC.size_t
+   is
+      zdata : curldata;
+      for zdata'Address use userdata;
+      pragma Import (Ada, zdata);
+--      response_code : Long_Integer;
+   begin
+--      response_code := curl_header.get_info_value_long (zdata.curlobj,
+--                                                        curl_header.CURLINFO_RESPONSE_CODE);
+ --     Ada.Text_IO.Put_Line ("response code:" & response_code'Img);
+
+      declare
+         subtype cdatatype is IC.char_array (1 .. nmemb);
+
+         cdata : constant String := IC.Strings.Value (ptr, nmemb);
+         delim : Natural;
+         equalsign : Natural;
+      begin
+         --  Ada.Text_IO.Put_Line (cdata (cdata'First .. cdata'Last - 2));
+         delim := FIX.index (cdata, ":");
+         if delim > 0 then
+            if cdata (cdata'First .. delim) = "Cache-Control:" then
+               equalsign := FIX.index (cdata, "=", delim);
+               if equalsign > 0 then
+                  if cdata (cdata'First .. equalsign) = "Cache-Control: max-age=" then
+                     begin
+                        zdata.max_age := Natural'Value (cdata (equalsign + 1 .. cdata'Last - 2));
+                        Ada.Text_IO.Put_Line ("max age =" & zdata.max_age'Img);
+                     exception
+                        when others => null;
+                     end;
+                  end if;
+               end if;
+            elsif cdata (cdata'First .. delim) = "ETag:" then
+               write_etag_file (ASU.To_String (zdata.etag_file), extract_etag (cdata));
+            end if;
+         end if;
+      end;
+
+      return nmemb;
+   end process_header;
+
+
+   --------------------
+   --  extract_etag  --
+   --------------------
+   function extract_etag (raw_etag : String) return String
+   is
+      myquote : constant String (1 .. 1) := (1 => '"');
+      first_quote : Natural;
+      second_quote : Natural;
+   begin
+      first_quote := FIX.index (raw_etag, myquote);
+      if first_quote > 0 then
+         second_quote := FIX.index (raw_etag, myquote, first_quote + 1);
+         if second_quote > 0 then
+            return raw_etag (first_quote + 1 .. second_quote - 1);
+         end if;
+      end if;
+      return "";
+   end extract_etag;
+
+
+   -----------------------
+   --  write_etag_file  --
+   -----------------------
+   procedure write_etag_file (filename : String; etag : String)
+   is
+      File_Size : constant Natural := etag'Length;
+
+      subtype File_String    is String (1 .. File_Size);
+      package File_String_IO is new Ada.Direct_IO (File_String);
+
+      file_handle : File_String_IO.File_Type;
+   begin
+      File_String_IO.Create (File => file_handle,
+                             Mode => File_String_IO.Out_File,
+                             Name => filename);
+      File_String_IO.Write  (File => file_handle,
+                             Item => etag);
+      File_String_IO.Close  (file_handle);
+   exception
+      when Storage_Error =>
+         if File_String_IO.Is_Open (file_handle) then
+            File_String_IO.Close (file_handle);
+         end if;
+      when others =>
+         if File_String_IO.Is_Open (file_handle) then
+            File_String_IO.Close (file_handle);
+         end if;
+   end write_etag_file;
+
+
+   -------------------------------
+   --  found_current_etag_file  --
+   -------------------------------
+   function found_current_etag_file (filename : String) return Boolean is
+   begin
+      --  temp, needs to check mtime
+      if Ada.Directories.Exists (filename) then
+         case Ada.Directories.Kind (filename) is
+            when Ada.Directories.Ordinary_File =>
+               return True;
+            when others => null;
+         end case;
+      end if;
+      return False;
+   end found_current_etag_file;
+
+
+   ------------------
+   --  saved_etag  --
+   ------------------
+   function saved_etag (filename : String) return String
+   is
+      filesize : constant Natural := Natural (Ada.Directories.Size (filename));
+   begin
+      declare
+         subtype File_String    is String (1 .. filesize);
+         package File_String_IO is new Ada.Direct_IO (File_String);
+         File     : File_String_IO.File_Type;
+         Contents : File_String;
+      begin
+         File_String_IO.Open (File => File,
+                              Mode => File_String_IO.In_File,
+                              Name => filename);
+         File_String_IO.Read (File => File,
+                              Item => Contents);
+         File_String_IO.Close (File);
+         return Contents;
+      exception
+         when others =>
+            if File_String_IO.Is_Open (File) then
+               File_String_IO.Close (File);
+            end if;
+            return "";
+      end;
+   end saved_etag;
 
 end curl_callbacks;

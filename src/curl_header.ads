@@ -8,6 +8,17 @@ package curl_header is
    type CURLX is new System.Address;
    subtype Void_Ptr is System.Address;
 
+   type curl_slist is
+      record
+         data : IC.Strings.chars_ptr;
+         next : System.Address;
+      end record;
+   pragma Convention (C, curl_slist);
+
+   type access_curl_slist is access curl_slist;
+
+   wrong_curl_type : exception;
+
    type CURLcode is
      (CURLE_OK,
       CURLE_UNSUPPORTED_PROTOCOL,
@@ -411,7 +422,6 @@ package curl_header is
       CURLOPT_SOCKS5_GSSAPI_NEC,
       CURLOPT_RTSP_CLIENT_CSEQ,
       CURLOPT_RTSP_SERVER_CSEQ,
-      CURLOPT_TRANSFER_ENCODING,
       CURLOPT_ACCEPTTIMEOUT_MS,
       CURLOPT_TCP_KEEPIDLE,
       CURLOPT_TCP_KEEPINTVL,
@@ -485,7 +495,6 @@ package curl_header is
       CURLOPT_SOCKS5_GSSAPI_NEC          => 180,
       CURLOPT_RTSP_CLIENT_CSEQ           => 193,
       CURLOPT_RTSP_SERVER_CSEQ           => 194,
-      CURLOPT_TRANSFER_ENCODING          => 207,
       CURLOPT_ACCEPTTIMEOUT_MS           => 212,
       CURLOPT_TCP_KEEPIDLE               => 214,
       CURLOPT_TCP_KEEPINTVL              => 215,
@@ -551,6 +560,7 @@ package curl_header is
       CURLOPT_CERTINFO,
       CURLOPT_FTP_USE_PRET,
       CURLOPT_WILDCARDMATCH,
+      CURLOPT_TRANSFER_ENCODING,
       CURLOPT_TCP_KEEPALIVE,
       CURLOPT_SSL_ENABLE_ALPN,
       CURLOPT_SSL_VERIFYSTATUS,
@@ -604,6 +614,7 @@ package curl_header is
       CURLOPT_CERTINFO                   => 172,
       CURLOPT_FTP_USE_PRET               => 188,
       CURLOPT_WILDCARDMATCH              => 197,
+      CURLOPT_TRANSFER_ENCODING          => 207,
       CURLOPT_TCP_KEEPALIVE              => 213,
       CURLOPT_SSL_ENABLE_ALPN            => 226,
       CURLOPT_SSL_VERIFYSTATUS           => 232,
@@ -677,13 +688,20 @@ package curl_header is
    type OptionPointer is
      (CURLOPT_WRITEDATA,
       CURLOPT_READDATA,
+      CURLOPT_ERRORBUFFER,
       CURLOPT_POSTFIELDS,
+      CURLOPT_HTTPHEADER,
+      CURLOPT_QUOTE,
       CURLOPT_HEADERDATA,
       CURLOPT_STDERR,
+      CURLOPT_POSTQUOTE,
       CURLOPT_XFERINFODATA,
+      CURLOPT_TELNETOPTIONS,
+      CURLOPT_PREQUOTE,
       CURLOPT_DEBUGDATA,
       CURLOPT_SHARE,
       CURLOPT_PRIVATE,
+      CURLOPT_HTTP200ALIASES,
       CURLOPT_SSL_CTX_DATA,
       CURLOPT_IOCTLDATA,
       CURLOPT_SOCKOPTDATA,
@@ -691,12 +709,16 @@ package curl_header is
       CURLOPT_COPYPOSTFIELDS,
       CURLOPT_SEEKDATA,
       CURLOPT_SSH_KEYDATA,
+      CURLOPT_MAIL_RCPT,
       CURLOPT_INTERLEAVEDATA,
       CURLOPT_CHUNK_DATA,
       CURLOPT_FNMATCH_DATA,
+      CURLOPT_RESOLVE,
       CURLOPT_CLOSESOCKETDATA,
+      CURLOPT_PROXYHEADER,
       CURLOPT_STREAM_DEPENDS,
       CURLOPT_STREAM_DEPENDS_E,
+      CURLOPT_CONNECT_TO,
       CURLOPT_MIMEPOST,
       CURLOPT_RESOLVER_START_DATA,
       CURLOPT_CURLU,
@@ -710,13 +732,20 @@ package curl_header is
    for OptionPointer use
      (CURLOPT_WRITEDATA           => 10001,
       CURLOPT_READDATA            => 10009,
+      CURLOPT_ERRORBUFFER         => 10010,
       CURLOPT_POSTFIELDS          => 10015,
+      CURLOPT_HTTPHEADER          => 10023,
+      CURLOPT_QUOTE               => 10028,
       CURLOPT_HEADERDATA          => 10029,
       CURLOPT_STDERR              => 10037,
+      CURLOPT_POSTQUOTE           => 10039,
       CURLOPT_XFERINFODATA        => 10057,
+      CURLOPT_TELNETOPTIONS       => 10070,
+      CURLOPT_PREQUOTE            => 10093,
       CURLOPT_DEBUGDATA           => 10095,
       CURLOPT_SHARE               => 10100,
       CURLOPT_PRIVATE             => 10103,
+      CURLOPT_HTTP200ALIASES      => 10104,
       CURLOPT_SSL_CTX_DATA        => 10109,
       CURLOPT_IOCTLDATA           => 10130,
       CURLOPT_SOCKOPTDATA         => 10149,
@@ -724,12 +753,16 @@ package curl_header is
       CURLOPT_COPYPOSTFIELDS      => 10165,
       CURLOPT_SEEKDATA            => 10168,
       CURLOPT_SSH_KEYDATA         => 10185,
+      CURLOPT_MAIL_RCPT           => 10187,
       CURLOPT_INTERLEAVEDATA      => 10195,
       CURLOPT_CHUNK_DATA          => 10201,
       CURLOPT_FNMATCH_DATA        => 10202,
+      CURLOPT_RESOLVE             => 10203,
       CURLOPT_CLOSESOCKETDATA     => 10209,
+      CURLOPT_PROXYHEADER         => 10228,
       CURLOPT_STREAM_DEPENDS      => 10240,
       CURLOPT_STREAM_DEPENDS_E    => 10241,
+      CURLOPT_CONNECT_TO          => 10243,
       CURLOPT_MIMEPOST            => 10269,
       CURLOPT_RESOLVER_START_DATA => 10273,
       CURLOPT_CURLU               => 10282,
@@ -751,6 +784,145 @@ package curl_header is
       CURLINFO_SSL_DATA_OUT,
       CURLINFO_END);
    pragma Convention (C, curl_infotype);
+
+   CURLINFO_STRING : constant Natural := 16#100000#;
+   CURLINFO_LONG   : constant Natural := 16#200000#;
+   CURLINFO_DOUBLE : constant Natural := 16#300000#;
+   CURLINFO_SLIST  : constant Natural := 16#400000#;
+   CURLINFO_PTR    : constant Natural := 16#400000#;  --  same as SLIST
+   CURLINFO_SOCKET : constant Natural := 16#500000#;
+   CURLINFO_OFF_T  : constant Natural := 16#600000#;
+
+   type curl_info is
+     (CURLINFO_NONE,
+      CURLINFO_LASTONE,
+      CURLINFO_EFFECTIVE_URL,
+      CURLINFO_CONTENT_TYPE,
+      CURLINFO_PRIVATE,
+      CURLINFO_FTP_ENTRY_PATH,
+      CURLINFO_REDIRECT_URL,
+      CURLINFO_PRIMARY_IP,
+      CURLINFO_RTSP_SESSION_ID,
+      CURLINFO_LOCAL_IP,
+      CURLINFO_SCHEME,
+      CURLINFO_EFFECTIVE_METHOD,
+      CURLINFO_REFERER,
+      CURLINFO_CAINFO,
+      CURLINFO_CAPATH,
+      CURLINFO_RESPONSE_CODE,
+      CURLINFO_HEADER_SIZE,
+      CURLINFO_REQUEST_SIZE,
+      CURLINFO_SSL_VERIFYRESULT,
+      CURLINFO_FILETIME,
+      CURLINFO_REDIRECT_COUNT,
+      CURLINFO_HTTP_CONNECTCODE,
+      CURLINFO_HTTPAUTH_AVAIL,
+      CURLINFO_PROXYAUTH_AVAIL,
+      CURLINFO_OS_ERRNO,
+      CURLINFO_NUM_CONNECTS,
+      CURLINFO_CONDITION_UNMET,
+      CURLINFO_RTSP_CLIENT_CSEQ,
+      CURLINFO_RTSP_SERVER_CSEQ,
+      CURLINFO_RTSP_CSEQ_RECV,
+      CURLINFO_PRIMARY_PORT,
+      CURLINFO_LOCAL_PORT,
+      CURLINFO_TOTAL_TIME,
+      CURLINFO_NAMELOOKUP_TIME,
+      CURLINFO_CONNECT_TIME,
+      CURLINFO_PRETRANSFER_TIME,
+      CURLINFO_STARTTRANSFER_TIME,
+      CURLINFO_REDIRECT_TIME,
+      CURLINFO_APPCONNECT_TIME,
+      CURLINFO_SSL_ENGINES,
+      CURLINFO_COOKIELIST,
+      CURLINFO_CERTINFO,
+      CURLINFO_TLS_SSL_PTR,
+      CURLINFO_ACTIVESOCKET,
+      CURLINFO_SIZE_UPLOAD_T,
+      CURLINFO_SIZE_DOWNLOAD_T,
+      CURLINFO_SPEED_DOWNLOAD_T,
+      CURLINFO_SPEED_UPLOAD_T,
+      CURLINFO_FILETIME_T,
+      CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
+      CURLINFO_CONTENT_LENGTH_UPLOAD_T,
+      CURLINFO_TOTAL_TIME_T,
+      CURLINFO_NAMELOOKUP_TIME_T,
+      CURLINFO_CONNECT_TIME_T,
+      CURLINFO_PRETRANSFER_TIME_T,
+      CURLINFO_STARTTRANSFER_TIME_T,
+      CURLINFO_REDIRECT_TIME_T,
+      CURLINFO_APPCONNECT_TIME_T,
+      CURLINFO_RETRY_AFTER,
+      CURLINFO_XFER_ID,
+      CURLINFO_CONN_ID,
+      CURLINFO_QUEUE_TIME_T
+     );
+
+   for curl_info use
+     (CURLINFO_NONE                 => 0,
+      CURLINFO_LASTONE              => 65,
+      CURLINFO_EFFECTIVE_URL        => CURLINFO_STRING + 1,
+      CURLINFO_CONTENT_TYPE         => CURLINFO_STRING + 18,
+      CURLINFO_PRIVATE              => CURLINFO_STRING + 21,
+      CURLINFO_FTP_ENTRY_PATH       => CURLINFO_STRING + 30,
+      CURLINFO_REDIRECT_URL         => CURLINFO_STRING + 31,
+      CURLINFO_PRIMARY_IP           => CURLINFO_STRING + 32,
+      CURLINFO_RTSP_SESSION_ID      => CURLINFO_STRING + 36,
+      CURLINFO_LOCAL_IP             => CURLINFO_STRING + 41,
+      CURLINFO_SCHEME               => CURLINFO_STRING + 49,
+      CURLINFO_EFFECTIVE_METHOD     => CURLINFO_STRING + 58,
+      CURLINFO_REFERER              => CURLINFO_STRING + 60,
+      CURLINFO_CAINFO               => CURLINFO_STRING + 61,
+      CURLINFO_CAPATH               => CURLINFO_STRING + 62,
+      CURLINFO_RESPONSE_CODE        => CURLINFO_LONG   + 2,
+      CURLINFO_HEADER_SIZE          => CURLINFO_LONG   + 11,
+      CURLINFO_REQUEST_SIZE         => CURLINFO_LONG   + 12,
+      CURLINFO_SSL_VERIFYRESULT     => CURLINFO_LONG   + 13,
+      CURLINFO_FILETIME             => CURLINFO_LONG   + 14,
+      CURLINFO_REDIRECT_COUNT       => CURLINFO_LONG   + 20,
+      CURLINFO_HTTP_CONNECTCODE     => CURLINFO_LONG   + 22,
+      CURLINFO_HTTPAUTH_AVAIL       => CURLINFO_LONG   + 23,
+      CURLINFO_PROXYAUTH_AVAIL      => CURLINFO_LONG   + 24,
+      CURLINFO_OS_ERRNO             => CURLINFO_LONG   + 25,
+      CURLINFO_NUM_CONNECTS         => CURLINFO_LONG   + 26,
+      CURLINFO_CONDITION_UNMET      => CURLINFO_LONG   + 35,
+      CURLINFO_RTSP_CLIENT_CSEQ     => CURLINFO_LONG   + 37,
+      CURLINFO_RTSP_SERVER_CSEQ     => CURLINFO_LONG   + 38,
+      CURLINFO_RTSP_CSEQ_RECV       => CURLINFO_LONG   + 39,
+      CURLINFO_PRIMARY_PORT         => CURLINFO_LONG   + 40,
+      CURLINFO_LOCAL_PORT           => CURLINFO_LONG   + 42,
+      CURLINFO_TOTAL_TIME           => CURLINFO_DOUBLE + 3,
+      CURLINFO_NAMELOOKUP_TIME      => CURLINFO_DOUBLE + 4,
+      CURLINFO_CONNECT_TIME         => CURLINFO_DOUBLE + 5,
+      CURLINFO_PRETRANSFER_TIME     => CURLINFO_DOUBLE + 6,
+      CURLINFO_STARTTRANSFER_TIME   => CURLINFO_DOUBLE + 17,
+      CURLINFO_REDIRECT_TIME        => CURLINFO_DOUBLE + 19,
+      CURLINFO_APPCONNECT_TIME      => CURLINFO_DOUBLE + 33,
+      CURLINFO_SSL_ENGINES          => CURLINFO_SLIST  + 27,
+      CURLINFO_COOKIELIST           => CURLINFO_SLIST  + 28,
+      CURLINFO_CERTINFO             => CURLINFO_PTR    + 34,
+      CURLINFO_TLS_SSL_PTR          => CURLINFO_PTR    + 45,
+      CURLINFO_ACTIVESOCKET         => CURLINFO_SOCKET + 44,
+      CURLINFO_SIZE_UPLOAD_T        => CURLINFO_OFF_T  + 7,
+      CURLINFO_SIZE_DOWNLOAD_T      => CURLINFO_OFF_T  + 8,
+      CURLINFO_SPEED_DOWNLOAD_T     => CURLINFO_OFF_T  + 9,
+      CURLINFO_SPEED_UPLOAD_T       => CURLINFO_OFF_T  + 10,
+      CURLINFO_FILETIME_T           => CURLINFO_OFF_T  + 14,
+      CURLINFO_CONTENT_LENGTH_DOWNLOAD_T => CURLINFO_OFF_T  + 15,
+      CURLINFO_CONTENT_LENGTH_UPLOAD_T   => CURLINFO_OFF_T  + 16,
+      CURLINFO_TOTAL_TIME_T         => CURLINFO_OFF_T + 50,
+      CURLINFO_NAMELOOKUP_TIME_T    => CURLINFO_OFF_T + 51,
+      CURLINFO_CONNECT_TIME_T       => CURLINFO_OFF_T + 52,
+      CURLINFO_PRETRANSFER_TIME_T   => CURLINFO_OFF_T + 53,
+      CURLINFO_STARTTRANSFER_TIME_T => CURLINFO_OFF_T + 54,
+      CURLINFO_REDIRECT_TIME_T      => CURLINFO_OFF_T + 55,
+      CURLINFO_APPCONNECT_TIME_T    => CURLINFO_OFF_T + 56,
+      CURLINFO_RETRY_AFTER          => CURLINFO_OFF_T + 57,
+      CURLINFO_XFER_ID              => CURLINFO_OFF_T + 63,
+      CURLINFO_CONN_ID              => CURLINFO_OFF_T + 64,
+      CURLINFO_QUEUE_TIME_T         => CURLINFO_OFF_T + 65
+     );
+   pragma Convention (C, curl_info);
 
    type write_callback is access function
      (ptr      : IC.Strings.chars_ptr;
@@ -785,6 +957,10 @@ package curl_header is
    procedure curl_easy_cleanup (curl : CURLX);
    pragma Import (C, curl_easy_cleanup, "curl_easy_cleanup");
 
+   --  free a previously built curl_slist.
+   procedure curl_slist_free_all (list : access_curl_slist);
+   pragma Import (C, curl_slist_free_all, "curl_slist_free_all");
+
    --  overloaded procedure to set curl object string properties
    procedure set_curl_option (curlobj : CURLX; option : OptionString; optvalue : String);
 
@@ -797,6 +973,11 @@ package curl_header is
    --  overloaded procedure to set curl object pointer properties
    procedure set_curl_option (curlobj : CURLX; option : OptionPointer; optvalue : Void_Ptr);
 
+   --  overloaded procedure to set curl linked string list properties
+   procedure set_curl_option (curlobj : CURLX;
+                              option  : OptionPointer;
+                              optvalue : access_curl_slist);
+
    --  implement CURLOPT_WRITEFUNCTION, CURLOPT_READFUNCTION, CURLOPT_HEADERFUNCTION
    procedure set_write_callback  (curlobj : CURLX; callback : write_callback);
    procedure set_read_callback   (curlobj : CURLX; callback : write_callback);
@@ -807,6 +988,11 @@ package curl_header is
 
    --  CURLOPT_XFERINFOFUNCTION
    procedure set_progress_callback (curlobj : CURLX; callback : progress_callback);
+
+   --  Get long integer curl information
+   function get_info_value_long (curlobj : CURLX; info : curl_info) return Long_Integer;
+
+   procedure build_header (list : in out access_curl_slist; header_line : String);
 
    procedure execute_curl (curlobj : CURLX);
 
@@ -854,9 +1040,27 @@ private
       value  : Void_Ptr) return CURLcode;
    pragma Import (C, curl_setopt_pointer, "curl_easy_setopt");
 
+   function curl_setopt_slist
+     (curl   : CURLX;
+      option : OptionPointer;
+      value  : access_curl_slist) return CURLcode;
+   pragma Import (C, curl_setopt_slist, "curl_easy_setopt");
+
    function curl_easy_perform
      (curl   : CURLX) return CURLcode;
    pragma Import (C, curl_easy_perform, "curl_easy_perform");
 
+   function curl_easy_getinfo_sysaddress
+     (curl   : CURLX;
+      info   : curl_info;
+      value  : Void_Ptr) return CURLcode;
+   pragma Import (C, curl_easy_getinfo_sysaddress, "curl_easy_getinfo");
+
+   --  Appends a string to a linked list. If no list exists, it will be created
+   --  first. Returns the new list, after appending.
+   function curl_slist_append
+     (list : access_curl_slist;
+      data : IC.Strings.chars_ptr) return access_curl_slist;
+   pragma Import (C, curl_slist_append, "curl_slist_append");
 
 end curl_header;

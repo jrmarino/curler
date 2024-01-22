@@ -73,6 +73,23 @@ package body curl_header is
    end set_curl_option;
 
 
+   --------------------------
+   --  set_curl_option #5  --
+   --------------------------
+   procedure set_curl_option (curlobj : CURLX;
+                              option : OptionPointer;
+                              optvalue : access_curl_slist)
+   is
+      result : CURLcode;
+   begin
+      result := curl_setopt_slist (curlobj, option, optvalue);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to set " & option'Img);
+      end case;
+   end set_curl_option;
+
+
    --------------------
    --  execute_curl  --
    --------------------
@@ -161,5 +178,57 @@ package body curl_header is
          when others => TIO.Put_Line ("Failed to set set_progress_callback");
       end case;
    end set_progress_callback;
+
+
+   ---------------------------
+   --  get_info_value_long  --
+   ---------------------------
+   function get_info_value_long (curlobj : CURLX; info : curl_info) return Long_Integer
+   is
+      cres   : IC.long := 0;
+      result : CURLcode;
+   begin
+      case info is
+         when CURLINFO_RESPONSE_CODE    |
+              CURLINFO_HEADER_SIZE      |
+              CURLINFO_REQUEST_SIZE     |
+              CURLINFO_SSL_VERIFYRESULT |
+              CURLINFO_FILETIME         |
+              CURLINFO_REDIRECT_COUNT   |
+              CURLINFO_HTTP_CONNECTCODE |
+              CURLINFO_HTTPAUTH_AVAIL   |
+              CURLINFO_PROXYAUTH_AVAIL  |
+              CURLINFO_OS_ERRNO         |
+              CURLINFO_NUM_CONNECTS     |
+              CURLINFO_CONDITION_UNMET  |
+              CURLINFO_RTSP_CLIENT_CSEQ |
+              CURLINFO_RTSP_SERVER_CSEQ |
+              CURLINFO_RTSP_CSEQ_RECV   |
+              CURLINFO_PRIMARY_PORT     |
+              CURLINFO_LOCAL_PORT       =>
+            null;
+         when others =>
+            raise wrong_curl_type with "expecting long value request";
+      end case;
+      result := curl_easy_getinfo_sysaddress (curlobj, info, cres'Address);
+      case result is
+         when CURLE_OK => null;
+         when others => TIO.Put_Line ("Failed to get get_info_value_long information");
+      end case;
+      return Long_Integer (cres);
+   end get_info_value_long;
+
+
+   --------------------
+   --  build_header  --
+   --------------------
+   procedure build_header (list : in out access_curl_slist; header_line : String)
+   is
+      cheader : IC.Strings.chars_ptr;
+   begin
+      cheader := IC.Strings.New_String (header_line);
+      list := curl_slist_append (list, cheader);
+      IC.Strings.Free (cheader);
+   end build_header;
 
 end curl_header;
