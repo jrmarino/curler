@@ -3,6 +3,7 @@ with Ada.Text_IO;
 with Ada.Strings.Fixed;
 with Ada.Direct_IO;
 with Ada.Directories;
+with Unix;
 
 package body curl_callbacks is
 
@@ -59,12 +60,7 @@ package body curl_callbacks is
       zdata : curldata;
       for zdata'Address use userdata;
       pragma Import (Ada, zdata);
---      response_code : Long_Integer;
    begin
---      response_code := curl_header.get_info_value_long (zdata.curlobj,
---                                                        curl_header.CURLINFO_RESPONSE_CODE);
- --     Ada.Text_IO.Put_Line ("response code:" & response_code'Img);
-
       declare
          subtype cdatatype is IC.char_array (1 .. nmemb);
 
@@ -150,16 +146,24 @@ package body curl_callbacks is
    -------------------------------
    --  found_current_etag_file  --
    -------------------------------
-   function found_current_etag_file (filename : String) return Boolean is
+   function found_current_etag_file (filename : String; target_file : String) return Boolean
+   is
+      target : Unix.Time_Characteristics;
+      filetc : Unix.Time_Characteristics;
    begin
-      --  temp, needs to check mtime
-      if Ada.Directories.Exists (filename) then
-         case Ada.Directories.Kind (filename) is
-            when Ada.Directories.Ordinary_File =>
-               return True;
-            when others => null;
-         end case;
-      end if;
+      target := Unix.get_time_characteristics (target_file);
+      case target.ftype is
+         when Unix.regular =>
+            filetc := Unix.get_time_characteristics (filename);
+            case filetc.ftype is
+               when Unix.regular =>
+                  return not Unix.tag_expired (filetc.mtime);
+               when others =>
+                  null;
+            end case;
+         when others =>
+            null;
+      end case;
       return False;
    end found_current_etag_file;
 

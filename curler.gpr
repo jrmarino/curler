@@ -8,5 +8,7 @@ project Curler is
       for Switches ("ada") use ("-lcurl_pic", "-lssh2_pic", "-lmbedtls", "-lmbedx509", "-lmbedcrypto", "-lz_pic", "-pthread");
    end Linker;
 
+   for Languages use ("Ada", "C");
+
 end Curler;
 

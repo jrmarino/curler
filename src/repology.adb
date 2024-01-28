@@ -14,6 +14,7 @@ is
                                "master/Mk/Misc/repology.json";
 
    etag_file : constant String := "/tmp/snapshot.etag";
+   downloaded_file : constant String := "/tmp/snapshot.json";
 
    data : CAL.curldata;
    curlobj : curl_header.CURLX;
@@ -23,7 +24,7 @@ begin
 
    data.totalsize := 0;
    data.etag_file := CAL.ASU.To_Unbounded_String (etag_file);
-   CAL.SIO.Create (data.file_handle, CAL.SIO.Out_File, "/tmp/repology.json");
+   CAL.SIO.Create (data.file_handle, CAL.SIO.Out_File, downloaded_file);
 
    curlobj := curl_header.curl_easy_init;
    data.curlobj := curlobj;
@@ -37,7 +38,7 @@ begin
    curl_header.set_write_callback (curlobj, CAL.write_file'Access);
    curl_header.set_header_callback (curlobj, CAL.process_header'Access);
 
-   if CAL.found_current_etag_file (etag_file) then
+   if CAL.found_current_etag_file (etag_file, downloaded_file) then
       declare
          set_etag : constant String := "If-None-Match: " &
            LAT.Quotation & CAL.saved_etag (etag_file) & LAT.Quotation;
