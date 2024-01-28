@@ -21,6 +21,14 @@ is
    response_code : Long_Integer;
    header_list : curl_header.access_curl_slist := null;
 begin
+   --  Don't do anything if:
+   --  1) downloaded file exists
+   --  2) etag file exists
+   --  3) etag file modification time is in the future
+   if CAL.target_file_cached (downloaded_file, etag_file) then
+      Ada.Text_IO.Put_Line ("cached " & downloaded_file & " still valid, nothing done.");
+      return;
+   end if;
 
    data.totalsize := 0;
    data.etag_file := CAL.ASU.To_Unbounded_String (etag_file);
@@ -38,7 +46,7 @@ begin
    curl_header.set_write_callback (curlobj, CAL.write_file'Access);
    curl_header.set_header_callback (curlobj, CAL.process_header'Access);
 
-   if CAL.found_current_etag_file (etag_file, downloaded_file) then
+   if CAL.found_etag_file (etag_file) then
       declare
          set_etag : constant String := "If-None-Match: " &
            LAT.Quotation & CAL.saved_etag (etag_file) & LAT.Quotation;
@@ -53,6 +61,10 @@ begin
    CAL.SIO.Close (data.file_handle);
 
    curl_header.curl_slist_free_all (header_list);
+
+   if not CAL.set_expiration_time (etag_file, data.max_age) then
+      Ada.Text_IO.Put_Line ("Failed to update modification time of " & etag_file);
+   end if;
 
    response_code := curl_header.get_info_value_long (curlobj,
                                                      curl_header.CURLINFO_RESPONSE_CODE);

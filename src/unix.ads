@@ -7,6 +7,9 @@ package Unix is
    type file_type   is (directory, regular, symlink, hardlink, fifo, unsupported);
    type nanoseconds is mod 2 ** 32;
    type filetime    is mod 2 ** 64;
+   type permissions is mod 2 ** 16;
+   type owngrp_id   is mod 2 ** 32;
+   type metadata_rc is mod 2 ** 5;
 
    type Time_Characteristics is
       record
@@ -21,6 +24,18 @@ package Unix is
 
    --  Returns True if the given file has a modification time in the past
    function tag_expired (mtime : filetime) return Boolean;
+
+   function adjust_metadata
+     (path         : String;
+      reset_owngrp : Boolean;
+      reset_perms  : Boolean;
+      reset_mtime  : Boolean;
+      type_of_file : file_type;
+      new_uid      : owngrp_id;
+      new_gid      : owngrp_id;
+      new_perms    : permissions;
+      new_m_secs   : filetime;
+      new_m_nano   : nanoseconds) return metadata_rc;
 
 private
 
@@ -67,5 +82,17 @@ private
    function file_modification_time (sb : struct_stat_Access) return time_specification;
 
    function type_of_file (sb : struct_stat_Access) return file_type;
+
+   function set_metadata
+     (path              : IC.char_array;
+      reset_modtime     : IC.unsigned_char;
+      reset_ownership   : IC.unsigned_char;
+      reset_permissions : IC.unsigned_char;
+      new_user_id       : IC.unsigned;
+      new_group_id      : IC.unsigned;
+      new_permissions   : IC.short;
+      new_mtime_epoch   : time_t;
+      new_mtime_nsecs   : IC.long) return IC.unsigned_char;
+   pragma Import (C, set_metadata);
 
 end Unix;

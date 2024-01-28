@@ -98,4 +98,62 @@ package body Unix is
       return current_time > mtime;
    end tag_expired;
 
+
+   -----------------------
+   --  adjust_metadata  --
+   -----------------------
+   function adjust_metadata
+     (path         : String;
+      reset_owngrp : Boolean;
+      reset_perms  : Boolean;
+      reset_mtime  : Boolean;
+      type_of_file : file_type;
+      new_uid      : owngrp_id;
+      new_gid      : owngrp_id;
+      new_perms    : permissions;
+      new_m_secs   : filetime;
+      new_m_nano   : nanoseconds) return metadata_rc
+   is
+      cpath     : constant IC.char_array := IC.To_C (path);
+      do_owner  : IC.unsigned_char := 0;
+      do_perms  : IC.unsigned_char := 0;
+      do_mtime  : IC.unsigned_char := 0;
+      rescode   : IC.unsigned_char := 0;
+      c_uid     : IC.unsigned := 0;
+      c_gid     : IC.unsigned := 0;
+      c_perms   : IC.short := 0;
+   begin
+      if reset_owngrp then
+         do_owner := 1;
+         c_uid := IC.unsigned (new_uid);
+         c_gid := IC.unsigned (new_gid);
+      end if;
+      if reset_perms then
+         do_perms := 1;
+         c_perms := IC.short (new_perms);
+      end if;
+      if reset_mtime then
+         do_mtime := 1;
+      end if;
+      case type_of_file is
+         when regular | directory =>
+            rescode := set_metadata
+              (path              => cpath,
+               reset_modtime     => do_mtime,
+               reset_ownership   => do_owner,
+               reset_permissions => do_perms,
+               new_user_id       => c_uid,
+               new_group_id      => c_gid,
+               new_permissions   => c_perms,
+               new_mtime_epoch   => time_t (new_m_secs),
+               new_mtime_nsecs   => IC.long (new_m_nano));
+         when unsupported | hardlink | fifo | symlink =>
+            --  Skip hardlinks.  This is set on the target.
+            --  Doing it again is redundant
+            null;
+      end case;
+      return metadata_rc (rescode);
+   end adjust_metadata;
+
+
 end Unix;

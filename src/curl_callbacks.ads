@@ -33,12 +33,19 @@ package curl_callbacks is
       userdata : System.Address) return IC.size_t;
    pragma Export (C, process_header);
 
+   --  returns true if the etag file is found and is a regular file
+   function found_etag_file (filename : String) return Boolean;
+
    --  returns true if the target_file is found, the etag file is found and
    --  the mtime is in the future.
-   function found_current_etag_file (filename : String; target_file : String) return Boolean;
+   function target_file_cached (target_file : String; etag_file : String) return Boolean;
 
    --  returns a string of the current etag
    function saved_etag (filename : String) return String;
+
+   --  update to the modification time of given file by max_age seconds
+   --  Returns true if successful
+   function set_expiration_time (path : String; max_age : Natural) return Boolean;
 
 private
 

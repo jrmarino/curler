@@ -143,10 +143,28 @@ package body curl_callbacks is
    end write_etag_file;
 
 
-   -------------------------------
-   --  found_current_etag_file  --
-   -------------------------------
-   function found_current_etag_file (filename : String; target_file : String) return Boolean
+   -----------------------
+   --  found_etag_file  --
+   -----------------------
+   function found_etag_file (filename : String) return Boolean
+   is
+      filetc : Unix.Time_Characteristics;
+   begin
+      filetc := Unix.get_time_characteristics (filename);
+      case filetc.ftype is
+         when Unix.regular =>
+            return True;
+         when others =>
+            null;
+      end case;
+      return False;
+   end found_etag_file;
+
+
+   --------------------------
+   --  target_file_cached  --
+   --------------------------
+   function target_file_cached (target_file : String; etag_file : String) return Boolean
    is
       target : Unix.Time_Characteristics;
       filetc : Unix.Time_Characteristics;
@@ -154,7 +172,7 @@ package body curl_callbacks is
       target := Unix.get_time_characteristics (target_file);
       case target.ftype is
          when Unix.regular =>
-            filetc := Unix.get_time_characteristics (filename);
+            filetc := Unix.get_time_characteristics (etag_file);
             case filetc.ftype is
                when Unix.regular =>
                   return not Unix.tag_expired (filetc.mtime);
@@ -165,7 +183,7 @@ package body curl_callbacks is
             null;
       end case;
       return False;
-   end found_current_etag_file;
+   end target_file_cached;
 
 
    ------------------
@@ -196,5 +214,40 @@ package body curl_callbacks is
             return "";
       end;
    end saved_etag;
+
+
+   ---------------------------
+   --  set_expiration_time  --
+   ---------------------------
+   function set_expiration_time (path : String; max_age : Natural) return Boolean
+   is
+      use type Unix.filetime;
+
+      filetc : Unix.Time_Characteristics;
+      rc     : Unix.metadata_rc;
+   begin
+      filetc := Unix.get_time_characteristics (path);
+      case filetc.ftype is
+         when Unix.regular =>
+            rc := Unix.adjust_metadata
+              (path         => path,
+               reset_owngrp => False,
+               reset_perms  => False,
+               reset_mtime  => True,
+               type_of_file => filetc.ftype,
+               new_uid      => 0,
+               new_gid      => 0,
+               new_perms    => 0,
+               new_m_secs   => filetc.mtime + Unix.filetime (max_age),
+               new_m_nano   => filetc.mnsec);
+            case rc is
+               when 0 => return True;
+               when others => null;
+            end case;
+         when others => null;
+      end case;
+      return False;
+   end set_expiration_time;
+
 
 end curl_callbacks;
