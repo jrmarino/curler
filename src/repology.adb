@@ -72,6 +72,8 @@ begin
    Ada.Text_IO.Put_Line ("response code:" & response_code'Img);
    if response_code = 200 then
       CAL.rename_temporary_file (downloaded_file, temporary_file);
+   else
+      CAL.remove_temporary_file (temporary_file);
    end if;
 
 end repology;

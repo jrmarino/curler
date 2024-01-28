@@ -54,6 +54,9 @@ package curl_callbacks is
    --  If a file with that name already exists, delete it first.
    procedure rename_temporary_file (true_path, temporary_path : String);
 
+   --  Deletes the given file
+   procedure remove_temporary_file (temporary_path : String);
+
 private
 
    --  returns the part of the etag between double quotations

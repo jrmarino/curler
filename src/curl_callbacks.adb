@@ -294,4 +294,19 @@ package body curl_callbacks is
       end if;
    end rename_temporary_file;
 
+
+   -----------------------------
+   --  remove_temporary_file  --
+   -----------------------------
+   procedure remove_temporary_file (temporary_path : String) is
+   begin
+      if Ada.Directories.Exists (temporary_path) then
+         begin
+            Ada.Directories.Delete_File (temporary_path);
+         exception
+            when others => return;
+         end;
+      end if;
+   end remove_temporary_file;
+
 end curl_callbacks;
