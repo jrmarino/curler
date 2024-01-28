@@ -1,12 +1,14 @@
 with Ada.Unchecked_Conversion;
 with Ada.Text_IO;
 with Ada.Strings.Fixed;
+with Ada.Real_Time;
 with Ada.Direct_IO;
 with Ada.Directories;
 with Unix;
 
 package body curl_callbacks is
 
+   package RT  renames Ada.Real_Time;
    package STM renames Ada.Streams;
    package FIX renames Ada.Strings.Fixed;
 
@@ -249,5 +251,47 @@ package body curl_callbacks is
       return False;
    end set_expiration_time;
 
+
+   ----------------------------------
+   --  randomized_download_target  --
+   ----------------------------------
+   function randomized_download_target (true_path : String) return String
+   is
+      right_now : constant RT.Time := RT.Clock;
+      seconds   : RT.Seconds_Count;
+      nanospan  : RT.Time_Span;
+      nduration : Duration;
+   begin
+      RT.Split (right_now, seconds, nanospan);
+      nduration := RT.To_Duration (nanospan);
+      declare
+         durstr : constant String := nduration'Img;
+      begin
+         --  durstr in format " 0.xxxxxxxxx" (leading space)
+         return true_path & durstr (durstr'First + 2 .. durstr'Last);
+      end;
+   end randomized_download_target;
+
+
+   -----------------------------
+   --  rename_temporary_file  --
+   -----------------------------
+   procedure rename_temporary_file (true_path, temporary_path : String) is
+   begin
+      if Ada.Directories.Exists (true_path) then
+         begin
+            Ada.Directories.Delete_File (true_path);
+         exception
+            when others => return;
+         end;
+      end if;
+      if Ada.Directories.Exists (temporary_path) then
+         begin
+            Ada.Directories.Rename (temporary_path, true_path);
+         exception
+            when others => return;
+         end;
+      end if;
+   end rename_temporary_file;
 
 end curl_callbacks;

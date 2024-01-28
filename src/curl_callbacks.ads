@@ -47,6 +47,13 @@ package curl_callbacks is
    --  Returns true if successful
    function set_expiration_time (path : String; max_age : Natural) return Boolean;
 
+   --  return a temporary filename (random extension of the base filename)
+   function randomized_download_target (true_path : String) return String;
+
+   --  Renames the temporary file to the final filename.
+   --  If a file with that name already exists, delete it first.
+   procedure rename_temporary_file (true_path, temporary_path : String);
+
 private
 
    --  returns the part of the etag between double quotations

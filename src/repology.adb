@@ -13,8 +13,9 @@ is
    latest : constant String := "https://raw.githubusercontent.com/Ravenports/Ravenports/" &
                                "master/Mk/Misc/repology.json";
 
-   etag_file : constant String := "/tmp/snapshot.etag";
+   etag_file       : constant String := "/tmp/snapshot.etag";
    downloaded_file : constant String := "/tmp/snapshot.json";
+   temporary_file  : constant String := CAL.randomized_download_target (downloaded_file);
 
    data : CAL.curldata;
    curlobj : curl_header.CURLX;
@@ -32,7 +33,7 @@ begin
 
    data.totalsize := 0;
    data.etag_file := CAL.ASU.To_Unbounded_String (etag_file);
-   CAL.SIO.Create (data.file_handle, CAL.SIO.Out_File, downloaded_file);
+   CAL.SIO.Create (data.file_handle, CAL.SIO.Out_File, temporary_file);
 
    curlobj := curl_header.curl_easy_init;
    data.curlobj := curlobj;
@@ -69,5 +70,8 @@ begin
    response_code := curl_header.get_info_value_long (curlobj,
                                                      curl_header.CURLINFO_RESPONSE_CODE);
    Ada.Text_IO.Put_Line ("response code:" & response_code'Img);
+   if response_code = 200 then
+      CAL.rename_temporary_file (downloaded_file, temporary_file);
+   end if;
 
 end repology;
