@@ -82,7 +82,8 @@ begin
    end if;
 
    declare
-      releasever : constant String := CAL.file_to_string ("/tmp/latest_release.txt");
+      contents   : constant String := CAL.file_to_string ("/tmp/latest_release.txt");
+      releasever : constant String := CAL.first_line (contents);
    begin
       if not download_file
         (remote_file_url => Ravenports & "/" & releasever & "/Mk/Misc/repology.json",

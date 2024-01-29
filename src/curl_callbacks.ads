@@ -57,6 +57,9 @@ package curl_callbacks is
    --  Deletes the given file
    procedure remove_temporary_file (temporary_path : String);
 
+   --  Returns substring from beginning to first \n
+   function first_line (contents : String) return String;
+
 private
 
    --  returns the part of the etag between double quotations

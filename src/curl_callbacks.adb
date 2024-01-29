@@ -308,4 +308,20 @@ package body curl_callbacks is
       end if;
    end remove_temporary_file;
 
+
+   ------------------
+   --  first_line  --
+   ------------------
+   function first_line (contents : String) return String
+   is
+      LF : constant String (1 .. 1) := (1 => Character'Val (10));
+      next_lf : Natural;
+   begin
+      next_lf := FIX.Index (contents, LF);
+      if next_lf > 0 then
+         return contents (contents'First .. next_lf - 1);
+      end if;
+      return contents;
+   end first_line;
+
 end curl_callbacks;
