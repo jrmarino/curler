@@ -79,7 +79,6 @@ package body curl_callbacks is
                   if cdata (cdata'First .. equalsign) = "Cache-Control: max-age=" then
                      begin
                         zdata.max_age := Natural'Value (cdata (equalsign + 1 .. cdata'Last - 2));
-                        Ada.Text_IO.Put_Line ("max age =" & zdata.max_age'Img);
                      exception
                         when others => null;
                      end;
