@@ -187,10 +187,10 @@ package body curl_callbacks is
    end target_file_cached;
 
 
-   ------------------
-   --  saved_etag  --
-   ------------------
-   function saved_etag (filename : String) return String
+   ----------------------
+   --  file_to_string  --
+   ----------------------
+   function file_to_string (filename : String) return String
    is
       filesize : constant Natural := Natural (Ada.Directories.Size (filename));
    begin
@@ -214,7 +214,7 @@ package body curl_callbacks is
             end if;
             return "";
       end;
-   end saved_etag;
+   end file_to_string;
 
 
    ---------------------------

@@ -40,8 +40,8 @@ package curl_callbacks is
    --  the mtime is in the future.
    function target_file_cached (target_file : String; etag_file : String) return Boolean;
 
-   --  returns a string of the current etag
-   function saved_etag (filename : String) return String;
+   --  returns a string of the contents of the given file
+   function file_to_string (filename : String) return String;
 
    --  update to the modification time of given file by max_age seconds
    --  Returns true if successful

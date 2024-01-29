@@ -50,7 +50,7 @@ begin
    if CAL.found_etag_file (etag_file) then
       declare
          set_etag : constant String := "If-None-Match: " &
-           LAT.Quotation & CAL.saved_etag (etag_file) & LAT.Quotation;
+           LAT.Quotation & CAL.file_to_string (etag_file) & LAT.Quotation;
       begin
          curl_header.build_header (header_list, set_etag);
          curl_header.set_curl_option (curlobj, curl_header.CURLOPT_HTTPHEADER, header_list);
